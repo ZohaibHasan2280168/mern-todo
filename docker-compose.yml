@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # 1. Database Tier (MongoDB)
+  mongodb_container:
+    image: mongo:6.0
+    container_name: mongodb_container
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - mern_network
+    restart: always
+
+  # 2. Application Tier (Backend/Express Server)
+  backend_container:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: backend_container
+    ports:
+      - "5000:5000"
+    environment:
+      # Code ke 'process.env.MONGODB_ATLAS_CONNECTION' se exact match kiya hai
+      - MONGODB_ATLAS_CONNECTION=mongodb://mongodb_container:27017/todo
+      - PORT=5000
+    depends_on:
+      - mongodb_container
+    networks:
+      - mern_network
+    restart: always
+
+  # 3. Web Tier (Frontend/React Client with Nginx Proxy)
+  frontend_container:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        - VITE_API_BASE_URL=/api
+    container_name: frontend_container
+    ports:
+      - "8082:80"
+    depends_on:
+      - backend_container
+    networks:
+      - mern_network
+    restart: always
+
+# Persistent Volume: Container refresh/stop hone par bhi data delete nahi hoga
+volumes:
+  mongo_data:
+
+# Isolated Network: Teeno containers apas mein container name se connect ho sakein
+networks:
+  mern_network:
+    driver: bridge
