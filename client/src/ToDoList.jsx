@@ -128,7 +128,7 @@ const ToDoList = () => {
       <div className="w-[32rem] m-4 min-h-[24rem] flex flex-col justify-start items-start px-8 py-6 space-y-6 rounded-xl overflow-hidden border border-gray-300 shadow-lg bg-white">
         <div className="flex gap-3 justify-center items-center text-3xl font-semibold text-gray-800">
           <RiCalendarTodoLine />
-          <h1>My Awesome To-Do List</h1>
+          <h1>To-Do List</h1>
         </div>
 
         {/* Form submission handles both button click and Enter key */}
