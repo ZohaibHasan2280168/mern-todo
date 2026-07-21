@@ -1,36 +1,50 @@
 pipeline {
     agent any
 
+    environment {
+        TARGET_IP = '20.205.14.246'
+        TARGET_USER = 'azureuser'
+    }
+
     stages {
         stage('Checkout Code') {
             steps {
-                echo 'Pulling latest production assets from secure Git Repository...'
+                echo 'Pulling latest production assets from Git Repository...'
                 git branch: 'main', url: 'https://github.com/ZohaibHasan2280168/mern-todo.git'
             }
         }
 
-        stage('Build & Deploy Components') {
+        stage('Deploy Components to Remote VM') {
             steps {
-                echo 'Building and starting microservices from root context...'
-                sh '''
-                    # 1. Network setup
-                    docker network create mern_network || true
+                echo "Deploying microservices to Remote VM (${env.TARGET_IP})..."
+                sh """
+                    ssh -o StrictHostKeyChecking=no ${env.TARGET_USER}@${env.TARGET_IP} '
+                        # 1. Project Directory Check / Clone
+                        if [ ! -d "mern-todo" ]; then
+                            git clone https://github.com/ZohaibHasan2280168/mern-todo.git
+                        fi
+                        
+                        cd mern-todo
+                        git pull origin main
 
-                    # 2. Database Tier (MongoDB)
-                    docker rm -f mongodb_container || true
-                    docker run -d --name mongodb_container --network mern_network -p 27017:27017 -v mongo_data:/data/db mongo:6.0
+                        # 2. Network setup
+                        docker network create mern_network || true
 
-                    # 3. Wait for MongoDB to fully initialize
-                    echo "Waiting for MongoDB to fully initialize..."
-                    sleep 5
+                        # 3. Database Tier (MongoDB)
+                        docker rm -f mongodb_container || true
+                        docker run -d --name mongodb_container --network mern_network -p 27017:27017 -v mongo_data:/data/db mongo:6.0
 
-                    # 4. Backend/Server Tier
-                    docker rm -f backend_container || true
-                    docker build -t mern-backend -f server/Dockerfile .
-                    docker run -d --name backend_container --network mern_network -p 5005:5000 -e MONGODB_ATLAS_CONNECTION=mongodb://mongodb_container:27017/todo -e PORT=5000 mern-backend
+                        # 4. Wait for MongoDB
+                        echo "Waiting for MongoDB..."
+                        sleep 5
 
-                    # 5. Injecting Reverse Proxy into Client Workspace
-                    cat << 'EOF' > client/default.conf
+                        # 5. Backend Tier
+                        docker rm -f backend_container || true
+                        docker build -t mern-backend -f server/Dockerfile .
+                        docker run -d --name backend_container --network mern_network -p 5005:5000 -e MONGODB_ATLAS_CONNECTION=mongodb://mongodb_container:27017/todo -e PORT=5000 mern-backend
+
+                        # 6. Injecting Nginx Config
+                        cat << "EOF" > client/default.conf
 server {
     listen 80;
     
@@ -53,30 +67,30 @@ server {
 }
 EOF
 
-                    # 6. Frontend/Client Tier Deployment
-                    docker stop frontend_container || true
-                    docker rm -f frontend_container || true
-                    
-                    docker build -t mern-frontend -f client/Dockerfile .
-                    docker run -d --name frontend_container --network mern_network -p 8082:80 mern-frontend
-                '''
+                        # 7. Frontend Tier Deployment
+                        docker stop frontend_container || true
+                        docker rm -f frontend_container || true
+                        docker build -t mern-frontend -f client/Dockerfile .
+                        docker run -d --name frontend_container --network mern_network -p 8082:80 mern-frontend
+                    '
+                """
             }
         }
-        
+
         stage('Post-Deployment Verification') {
             steps {
-                echo 'Validating operational status logs...'
-                sh 'docker ps'
+                echo 'Validating remote container logs...'
+                sh "ssh -o StrictHostKeyChecking=no ${env.TARGET_USER}@${env.TARGET_IP} 'docker ps'"
             }
         }
     }
-    
+
     post {
         success {
-            echo 'Continuous Deployment Sequence finalized successfully. Deployment is live.'
+            echo "Continuous Deployment finalized successfully! App is live at http://${env.TARGET_IP}:8082"
         }
         failure {
-            echo 'Deployment Execution Failure state detected. Inspect active agent console logs.'
+            echo 'Deployment Execution Failure state detected. Check logs.'
         }
     }
 }
