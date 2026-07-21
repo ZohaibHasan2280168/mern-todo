@@ -4,6 +4,7 @@ pipeline {
     environment {
         TARGET_IP = '20.205.14.246'
         TARGET_USER = 'azureuser'
+        SSH_CMD = "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${TARGET_USER}@${TARGET_IP}"
     }
 
     stages {
@@ -18,7 +19,7 @@ pipeline {
             steps {
                 echo "Deploying microservices to Remote VM (${env.TARGET_IP})..."
                 sh """
-                    ssh -o StrictHostKeyChecking=no ${env.TARGET_USER}@${env.TARGET_IP} '
+                    ${env.SSH_CMD} '
                         # 1. Project Directory Check / Clone
                         if [ ! -d "mern-todo" ]; then
                             git clone https://github.com/ZohaibHasan2280168/mern-todo.git
@@ -80,7 +81,7 @@ EOF
         stage('Post-Deployment Verification') {
             steps {
                 echo 'Validating remote container logs...'
-                sh "ssh -o StrictHostKeyChecking=no ${env.TARGET_USER}@${env.TARGET_IP} 'docker ps'"
+                sh "${env.SSH_CMD} 'docker ps'"
             }
         }
     }
