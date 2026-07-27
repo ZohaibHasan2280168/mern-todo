@@ -9,14 +9,17 @@ pipeline {
             }
         }
 
-        stage('Deploy Containers') {
+        stage('Deploy Microservices') {
             steps {
-                echo 'Deploying Microservices using Host Docker...'
+                echo 'Deploying Microservices using Host System Docker...'
                 sh '''
-                    # Fix Docker socket permissions if needed
-                    sudo chmod 666 /var/run/docker.sock || true
+                    # Install Docker CLI inside Jenkins container if missing
+                    if ! command -v docker &> /dev/null; then
+                        echo "Docker CLI not found inside Jenkins. Installing..."
+                        apt-get update && apt-get install -y docker.io || true
+                    fi
 
-                    # Create network
+                    # Execute Docker commands
                     docker network create mern_network || true
 
                     # 1. Database Tier (MongoDB)
