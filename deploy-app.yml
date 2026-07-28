@@ -1,16 +1,16 @@
 ---
-- name: Deploy MERN Todo Stack to All Target VMs
-  hosts: all
+- name: Deploy MERN Stack Application to All Target VMs
+  hosts: azure_vm
   become: yes
   tasks:
 
-    - name: Create Docker network
+    - name: Ensure Docker network exists
       community.docker.docker_network:
         name: mern_network
         state: present
 
-    # 1. Database Tier
-    - name: Run MongoDB Container
+    # 1. Database Tier (MongoDB)
+    - name: Deploy MongoDB Container
       community.docker.docker_container:
         name: mongodb_container
         image: mongo:6.0
@@ -40,8 +40,8 @@
           MONGODB_ATLAS_CONNECTION: "mongodb://mongodb_container:27017/todo"
           PORT: "5000"
 
-    # 3. Nginx Config for Frontend
-    - name: Create Nginx Config File
+    # 3. Nginx Config File Generation
+    - name: Generate Nginx Configuration
       copy:
         dest: "./client/default.conf"
         content: |
