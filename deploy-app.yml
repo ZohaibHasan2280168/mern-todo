@@ -37,7 +37,8 @@
     - name: Build Backend Image
       community.docker.docker_image:
         build:
-          path: /home/azureuser/app/server
+          path: /home/azureuser/app
+          dockerfile: server/Dockerfile
         name: mern-backend
         tag: latest
         source: build
