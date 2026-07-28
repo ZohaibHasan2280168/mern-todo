@@ -4,28 +4,25 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                echo 'Pulling latest code from GitHub repository...'
+                echo 'Pulling latest code from GitHub...'
                 git branch: 'main', url: 'https://github.com/ZohaibHasan2280168/mern-todo.git'
             }
         }
 
-        stage('Deploy Microservices to ALL VMs via Ansible') {
+        stage('Deploy to All VMs via Ansible') {
             steps {
-                echo 'Deploying application across all VMs in inventory...'
-                sh '''
-                    # Single Ansible execution that targets ALL VMs inside inventory.ini
-                    ansible-playbook -i inventory.ini deploy-app.yml
-                '''
+                echo 'Deploying MERN stack across all target VMs...'
+                sh 'ansible-playbook -i inventory.ini deploy-app.yml'
             }
         }
     }
 
     post {
         success {
-            echo 'Microservices successfully deployed to ALL target VMs!'
+            echo 'App successfully deployed on all VMs!'
         }
         failure {
-            echo 'Deployment Failed on one or more VMs!'
+            echo 'Deployment failed on one or more VMs!'
         }
     }
 }
